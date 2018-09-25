@@ -11,7 +11,7 @@ from keras.utils.np_utils import to_categorical
 from sklearn.model_selection import train_test_split
 from keras.layers.normalization import BatchNormalization
 from keras.layers import Conv1D, MaxPooling1D, Embedding
-from prepocess import load_train_set_data,load_train_test_set
+from prepocess import load_train_set_data,load_train_test_set,load_train_set_data_hanlp
 from sklearn import metrics
 import sklearn
 import pandas as pd
@@ -65,7 +65,8 @@ def get_textcnn(maxlen):
     model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['accuracy'])
     return model
 def bigru_train():
-    x_train, x_test, y_train, y_test,maxlen,vocab_len,labels =load_train_set_data('./DF_data/train_topic.csv')
+    # x_train, x_test, y_train, y_test,maxlen,vocab_len,labels =load_train_set_data('./DF_data/train_topic.csv')
+    x_train, x_test, y_train, y_test, maxlen, vocab_len, labels =load_train_set_data_hanlp('nlpt')
     model = bi_gru_model(maxlen,10,vocab_len)
 
 
@@ -146,4 +147,4 @@ def bigru_test():
             pred_oh[i] = vec
 
         to_categories_name('./DF_data/test_public.csv',pred_oh,labels)
-bigru_test()
+bigru_train()

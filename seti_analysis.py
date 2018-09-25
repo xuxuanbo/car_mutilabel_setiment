@@ -24,13 +24,13 @@ from keras.layers.normalization import BatchNormalization
 def bi_gru_model(maxlen,class_num,vocab_len):
     print("get_text_gru3")
     content = Input(shape=(maxlen,), dtype='int32')
-    embedding = Embedding(vocab_len+1, 300)
+    embedding = Embedding(vocab_len+1, 128)
 
     x = SpatialDropout1D(0.2)(embedding(content))
 
     x = Bidirectional(GRU(200, return_sequences=True))(x)
     x = Bidirectional(GRU(200, return_sequences=True))(x)
-
+    print x.shape
     avg_pool = GlobalAveragePooling1D()(x)
     max_pool = GlobalMaxPooling1D()(x)
 
@@ -43,46 +43,43 @@ def bi_gru_model(maxlen,class_num,vocab_len):
     model = Model(inputs=content, outputs=output)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
-def get_han2(sent_num, sent_length,vocab_len):
-    input = Input(shape=(sent_length,), dtype="int32")
-    embedding = Embedding(vocab_len + 1, 300)
-    sent_embed = embedding(input)
-    # print(np.shape(sent_embed))
-    # sent_embed = Reshape((1, sent_length, embed_weight.shape[1]))(sent_embed)
-    # sent_embed = Reshape((1, sent_length, 128))(sent_embed)
-    # print(np.shape(sent_embed))
-    word_bigru = Bidirectional(GRU(128, return_sequences=True))(sent_embed)
-    # word_bigru = Reshape((sent_length, 256))(word_bigru)
-    # print(np.shape(word_bigru))
-    word_attention = Attention(sent_length)(word_bigru)
-    # sent_encode = Reshape((-1, sent_num))(word_attention)
-    sent_encode = Model(sentence_input, word_attention)
-    #
-    # doc_input = Input(shape=(sent_num, sent_length), dtype="int32")
-    # doc_encode = TimeDistributed(sent_encode)(doc_input)
-    sent_bigru = Bidirectional(GRU(128, return_sequences=True))(sent_encode)
-    doc_attention = Attention(sent_num)(sent_bigru)
-    fc = Activation(activation="relu")(BatchNormalization()(Dense(256)(doc_attention)))
-    output = Dense(3, activation='softmax')(fc)
-    model = Model(input, output)
-    model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['accuracy'])
-    return model
-def get_han(sent_num, sent_length, vocab_len):
-    sentence_input = Input(shape=(sent_length,), dtype="int32",name='word_input')
-    embedding = Embedding(vocab_len + 1, 300)
-    sent_embed = embedding(sentence_input)
-    word_bigru = Bidirectional(GRU(128, return_sequences=True))(sent_embed)
-    word_attention = Attention(sent_length)(word_bigru)
-    sent_encode = Model(sentence_input, word_attention,name='sent_encode')
+def bilstm_h(maxlen,class_num,vocab_len):
+    #一次就够
+    print("get_text_lstm")
+    content = Input(shape=(maxlen,), dtype='int32')
+    embedding = Embedding(vocab_len + 1, 128)
 
-    doc_input = Input(shape=(sent_num, sent_length), dtype="int32",name="sent_input")
-    doc_encode = TimeDistributed(sent_encode)(doc_input)
-    sent_bigru = Bidirectional(GRU(128, return_sequences=True))(doc_encode)
-    sent_attention = Attention(sent_num)(sent_bigru)
-    fc = Activation(activation="relu")(BatchNormalization()(Dense(256)(sent_attention)))
-    output = Dense(3, activation='softmax')(fc)
-    model = Model(doc_input, output, name='doc_encode')
-    model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['accuracy'])
+    x = SpatialDropout1D(0.2)(embedding(content))
+
+    # x = Bidirectional(LSTM(200))(x)
+    x = Bidirectional(LSTM(200, return_sequences=True))(x)
+
+    avg_pool = GlobalAveragePooling1D()(x)
+    max_pool = GlobalMaxPooling1D()(x)
+
+    conc = concatenate([avg_pool, max_pool])
+
+    x = Dropout(0.5)(Activation(activation="relu")(BatchNormalization()(Dense(1000)(conc))))
+    x = Activation(activation="relu")(BatchNormalization()(Dense(500)(x)))
+    output = Dense(class_num, activation="sigmoid")(x)
+
+    model = Model(inputs=content, outputs=output)
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
+def bilstmModel2(vocab_len):
+    print u'创建模型...'
+    model = Sequential()
+    model.add(Embedding(vocab_len + 1, 128))
+    model.add(SpatialDropout1D(0.2))
+    model.add(LSTM(output_dim=50,
+                   activation='relu',
+                   inner_activation='hard_sigmoid'))
+    model.add(Dropout(0.5))
+    model.add(Dense(3, activation='softmax'))
+    print u'编译模型...'
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adam',
+                  metrics=['accuracy'])
     return model
 def bilstmModel(vocab_len):
     # 训练模型
@@ -100,6 +97,7 @@ def bilstmModel(vocab_len):
     return model
 
 x_train, x_test, y_train, y_test,maxlen,vocab__len,labels = load_train_set_data_setiments('./DF_data/train.csv')
+# model = bilstmModel2(vocab__len)
 model = bi_gru_model(maxlen,3,vocab__len)
 # model = get_han2(x_train.shape[1],128,vocab__len)
 for i in range(10):
